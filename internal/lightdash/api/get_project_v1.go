@@ -18,14 +18,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
 type GetProjectV1Results struct {
-	OrganizationUUID  string `json:"organizationUuid"`
-	ProjectUUID       string `json:"projectUuid"`
-	ProjectName       string `json:"name"`
-	ProjectType       string `json:"type"`
-	SchedulerTimezone string `json:"schedulerTimezone"`
+	OrganizationUUID                     string                         `json:"organizationUuid"`
+	ProjectUUID                          string                         `json:"projectUuid"`
+	ProjectName                          string                         `json:"name"`
+	ProjectType                          string                         `json:"type"`
+	SchedulerTimezone                    string                         `json:"schedulerTimezone"`
+	DbtConnection                        *models.DbtGithubProjectConfig `json:"dbtConnection,omitempty"`
+	DbtVersion                           string                         `json:"dbtVersion,omitempty"`
+	OrganizationWarehouseCredentialsUUID *string                        `json:"organizationWarehouseCredentialsUuid,omitempty"`
+	UpstreamProjectUUID                  *string                        `json:"upstreamProjectUuid,omitempty"`
+	PinnedListUUID                       *string                        `json:"pinnedListUuid,omitempty"`
 }
 
 type GetProjectV1Response struct {
