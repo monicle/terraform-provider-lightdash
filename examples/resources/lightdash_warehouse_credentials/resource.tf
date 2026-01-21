@@ -10,12 +10,12 @@ resource "lightdash_warehouse_credentials" "bigquery_prod" {
   keyfile_contents = file("${path.module}/service-account-key.json")
 
   # Optional: BigQuery performance settings
-  location               = "US"
-  timeout_seconds        = 300
-  maximum_bytes_billed   = 1000000000
-  priority               = "INTERACTIVE"
-  retries                = 3
-  start_of_week          = 1
+  location             = "US"
+  timeout_seconds      = 300
+  maximum_bytes_billed = 1000000000
+  priority             = "INTERACTIVE"
+  retries              = 3
+  start_of_week        = 1
 }
 
 # Minimal configuration example
