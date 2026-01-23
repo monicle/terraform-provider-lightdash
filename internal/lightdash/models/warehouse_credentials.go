@@ -23,18 +23,18 @@ type CredentialsDetail struct {
 
 // BigQueryCredentials represents BigQuery warehouse credentials with service account key
 type BigQueryCredentials struct {
-	Type                       string  `json:"type"`
-	Project                    string  `json:"project"`
-	Dataset                    *string `json:"dataset,omitempty"`
-	KeyfileContents            string  `json:"keyfileContents"`
-	Location                   *string `json:"location,omitempty"`
-	TimeoutSeconds             *int    `json:"timeoutSeconds,omitempty"`
-	MaximumBytesBilled         *int64  `json:"maximumBytesBilled,omitempty"`
-	Priority                   *string `json:"priority,omitempty"`
-	Retries                    *int    `json:"retries,omitempty"`
-	StartOfWeek                *int    `json:"startOfWeek,omitempty"`
-	RequireUserCredentials     *bool   `json:"requireUserCredentials,omitempty"`
-	OrganizationWarehouseUUID  *string `json:"organizationWarehouseCredentialsUuid,omitempty"`
+	Type                       string                 `json:"type"`
+	Project                    string                 `json:"project"`
+	Dataset                    *string                `json:"dataset,omitempty"`
+	KeyfileContents            map[string]interface{} `json:"keyfileContents"`
+	Location                   *string                `json:"location,omitempty"`
+	TimeoutSeconds             *int                   `json:"timeoutSeconds,omitempty"`
+	MaximumBytesBilled         *int64                 `json:"maximumBytesBilled,omitempty"`
+	Priority                   *string                `json:"priority,omitempty"`
+	Retries                    *int                   `json:"retries,omitempty"`
+	StartOfWeek                *int                   `json:"startOfWeek,omitempty"`
+	RequireUserCredentials     *bool                  `json:"requireUserCredentials,omitempty"`
+	OrganizationWarehouseUUID  *string                `json:"organizationWarehouseCredentialsUuid,omitempty"`
 }
 
 type WarehouseCredentials struct {

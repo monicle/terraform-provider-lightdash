@@ -16,7 +16,9 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -187,11 +189,21 @@ func (r *warehouseCredentialsResource) Create(ctx context.Context, req resource.
 		return
 	}
 
+	// Parse keyfile contents JSON
+	var keyfileMap map[string]interface{}
+	if err := json.Unmarshal([]byte(plan.KeyfileContents.ValueString()), &keyfileMap); err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing keyfile_contents",
+			"Could not parse keyfile_contents as JSON: "+err.Error(),
+		)
+		return
+	}
+
 	// Build BigQuery credentials
 	credentials := models.BigQueryCredentials{
 		Type:            plan.WarehouseType.ValueString(),
 		Project:         plan.Project.ValueString(),
-		KeyfileContents: plan.KeyfileContents.ValueString(),
+		KeyfileContents: keyfileMap,
 	}
 
 	if !plan.Dataset.IsNull() {
@@ -215,7 +227,8 @@ func (r *warehouseCredentialsResource) Create(ctx context.Context, req resource.
 	}
 
 	if !plan.Priority.IsNull() {
-		priority := plan.Priority.ValueString()
+		// Convert priority to lowercase (API expects lowercase)
+		priority := strings.ToLower(plan.Priority.ValueString())
 		credentials.Priority = &priority
 	}
 
@@ -303,11 +316,21 @@ func (r *warehouseCredentialsResource) Update(ctx context.Context, req resource.
 		return
 	}
 
+	// Parse keyfile contents JSON
+	var keyfileMap map[string]interface{}
+	if err := json.Unmarshal([]byte(plan.KeyfileContents.ValueString()), &keyfileMap); err != nil {
+		resp.Diagnostics.AddError(
+			"Error parsing keyfile_contents",
+			"Could not parse keyfile_contents as JSON: "+err.Error(),
+		)
+		return
+	}
+
 	// Build BigQuery credentials
 	credentials := models.BigQueryCredentials{
 		Type:            plan.WarehouseType.ValueString(),
 		Project:         plan.Project.ValueString(),
-		KeyfileContents: plan.KeyfileContents.ValueString(),
+		KeyfileContents: keyfileMap,
 	}
 
 	if !plan.Dataset.IsNull() {
@@ -331,7 +354,8 @@ func (r *warehouseCredentialsResource) Update(ctx context.Context, req resource.
 	}
 
 	if !plan.Priority.IsNull() {
-		priority := plan.Priority.ValueString()
+		// Convert priority to lowercase (API expects lowercase)
+		priority := strings.ToLower(plan.Priority.ValueString())
 		credentials.Priority = &priority
 	}
 
