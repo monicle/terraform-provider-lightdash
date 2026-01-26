@@ -27,6 +27,7 @@ type BigQueryCredentials struct {
 	Project                    string                 `json:"project"`
 	Dataset                    *string                `json:"dataset,omitempty"`
 	KeyfileContents            map[string]interface{} `json:"keyfileContents"`
+	AuthenticationType         *string                `json:"authenticationType,omitempty"`
 	Location                   *string                `json:"location,omitempty"`
 	TimeoutSeconds             *int                   `json:"timeoutSeconds,omitempty"`
 	MaximumBytesBilled         *int64                 `json:"maximumBytesBilled,omitempty"`

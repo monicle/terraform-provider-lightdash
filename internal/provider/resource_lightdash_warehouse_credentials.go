@@ -56,6 +56,7 @@ type warehouseCredentialsResourceModel struct {
 	Name                      types.String `tfsdk:"name"`
 	Description               types.String `tfsdk:"description"`
 	WarehouseType             types.String `tfsdk:"warehouse_type"`
+	AuthenticationType        types.String `tfsdk:"authentication_type"`
 	Project                   types.String `tfsdk:"project"`
 	Dataset                   types.String `tfsdk:"dataset"`
 	KeyfileContents           types.String `tfsdk:"keyfile_contents"`
@@ -112,6 +113,10 @@ func (r *warehouseCredentialsResource) Schema(ctx context.Context, req resource.
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+		"authentication_type": schema.StringAttribute{
+			MarkdownDescription: "The authentication type for BigQuery. Currently only 'private_key' is supported.",
+			Required:            true,
+		},
 			"project": schema.StringAttribute{
 				MarkdownDescription: "The GCP project ID for BigQuery.",
 				Required:            true,
@@ -189,6 +194,16 @@ func (r *warehouseCredentialsResource) Create(ctx context.Context, req resource.
 		return
 	}
 
+	// Validate authentication type
+	authType := plan.AuthenticationType.ValueString()
+	if authType != "private_key" {
+		resp.Diagnostics.AddError(
+			"Unsupported authentication type",
+			fmt.Sprintf("Authentication type '%s' is not implemented. Currently only 'private_key' is supported.", authType),
+		)
+		return
+	}
+
 	// Parse keyfile contents JSON
 	var keyfileMap map[string]interface{}
 	if err := json.Unmarshal([]byte(plan.KeyfileContents.ValueString()), &keyfileMap); err != nil {
@@ -201,9 +216,10 @@ func (r *warehouseCredentialsResource) Create(ctx context.Context, req resource.
 
 	// Build BigQuery credentials
 	credentials := models.BigQueryCredentials{
-		Type:            plan.WarehouseType.ValueString(),
-		Project:         plan.Project.ValueString(),
-		KeyfileContents: keyfileMap,
+		Type:               plan.WarehouseType.ValueString(),
+		Project:            plan.Project.ValueString(),
+		KeyfileContents:    keyfileMap,
+		AuthenticationType: &authType,
 	}
 
 	if !plan.Dataset.IsNull() {
@@ -316,6 +332,16 @@ func (r *warehouseCredentialsResource) Update(ctx context.Context, req resource.
 		return
 	}
 
+	// Validate authentication type
+	authType := plan.AuthenticationType.ValueString()
+	if authType != "private_key" {
+		resp.Diagnostics.AddError(
+			"Unsupported authentication type",
+			fmt.Sprintf("Authentication type '%s' is not implemented. Currently only 'private_key' is supported.", authType),
+		)
+		return
+	}
+
 	// Parse keyfile contents JSON
 	var keyfileMap map[string]interface{}
 	if err := json.Unmarshal([]byte(plan.KeyfileContents.ValueString()), &keyfileMap); err != nil {
@@ -328,9 +354,10 @@ func (r *warehouseCredentialsResource) Update(ctx context.Context, req resource.
 
 	// Build BigQuery credentials
 	credentials := models.BigQueryCredentials{
-		Type:            plan.WarehouseType.ValueString(),
-		Project:         plan.Project.ValueString(),
-		KeyfileContents: keyfileMap,
+		Type:               plan.WarehouseType.ValueString(),
+		Project:            plan.Project.ValueString(),
+		KeyfileContents:    keyfileMap,
+		AuthenticationType: &authType,
 	}
 
 	if !plan.Dataset.IsNull() {

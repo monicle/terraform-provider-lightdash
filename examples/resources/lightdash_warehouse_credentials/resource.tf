@@ -1,8 +1,9 @@
 resource "lightdash_warehouse_credentials" "bigquery_prod" {
-  organization_uuid = "xxxxxxxx-xxxxxxxxxx-xxxxxxxxx"
-  name              = "BigQuery Production"
-  description       = "Production BigQuery warehouse credentials"
-  warehouse_type    = "bigquery"
+  organization_uuid    = "xxxxxxxx-xxxxxxxxxx-xxxxxxxxx"
+  name                 = "BigQuery Production"
+  description          = "Production BigQuery warehouse credentials"
+  warehouse_type       = "bigquery"
+  authentication_type  = "private_key"
 
   # BigQuery specific configuration
   project          = "my-gcp-project-id"
@@ -20,9 +21,10 @@ resource "lightdash_warehouse_credentials" "bigquery_prod" {
 
 # Minimal configuration example
 resource "lightdash_warehouse_credentials" "bigquery_minimal" {
-  organization_uuid = "xxxxxxxx-xxxxxxxxxx-xxxxxxxxx"
-  name              = "BigQuery Minimal"
-  warehouse_type    = "bigquery"
-  project           = "my-gcp-project-id"
-  keyfile_contents  = file("${path.module}/service-account-key.json")
+  organization_uuid   = "xxxxxxxx-xxxxxxxxxx-xxxxxxxxx"
+  name                = "BigQuery Minimal"
+  warehouse_type      = "bigquery"
+  authentication_type = "private_key"
+  project             = "my-gcp-project-id"
+  keyfile_contents    = file("${path.module}/service-account-key.json")
 }
