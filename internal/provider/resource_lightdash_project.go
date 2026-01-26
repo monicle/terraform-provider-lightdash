@@ -16,7 +16,9 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -57,17 +59,33 @@ type dbtConnectionModel struct {
 	Target              types.String `tfsdk:"target"`
 }
 
+// warehouseConnectionModel describes the warehouse connection nested object
+type warehouseConnectionModel struct {
+	Type                 types.String `tfsdk:"type"`
+	Project              types.String `tfsdk:"project"`
+	Dataset              types.String `tfsdk:"dataset"`
+	KeyfileContents      types.String `tfsdk:"keyfile_contents"`
+	AuthenticationType   types.String `tfsdk:"authentication_type"`
+	Location             types.String `tfsdk:"location"`
+	TimeoutSeconds       types.Int64  `tfsdk:"timeout_seconds"`
+	MaximumBytesBilled   types.Int64  `tfsdk:"maximum_bytes_billed"`
+	Priority             types.String `tfsdk:"priority"`
+	Retries              types.Int64  `tfsdk:"retries"`
+	StartOfWeek          types.Int64  `tfsdk:"start_of_week"`
+}
+
 // projectResourceModel describes the resource data model.
 type projectResourceModel struct {
-	ID                                   types.String        `tfsdk:"id"`
-	OrganizationUUID                     types.String        `tfsdk:"organization_uuid"`
-	ProjectUUID                          types.String        `tfsdk:"project_uuid"`
-	Name                                 types.String        `tfsdk:"name"`
-	Type                                 types.String        `tfsdk:"type"`
-	DbtVersion                           types.String        `tfsdk:"dbt_version"`
-	DbtConnection                        *dbtConnectionModel `tfsdk:"dbt_connection"`
-	OrganizationWarehouseCredentialsUUID types.String        `tfsdk:"organization_warehouse_credentials_uuid"`
-	UpstreamProjectUUID                  types.String        `tfsdk:"upstream_project_uuid"`
+	ID                                   types.String              `tfsdk:"id"`
+	OrganizationUUID                     types.String              `tfsdk:"organization_uuid"`
+	ProjectUUID                          types.String              `tfsdk:"project_uuid"`
+	Name                                 types.String              `tfsdk:"name"`
+	Type                                 types.String              `tfsdk:"type"`
+	DbtVersion                           types.String              `tfsdk:"dbt_version"`
+	DbtConnection                        *dbtConnectionModel       `tfsdk:"dbt_connection"`
+	OrganizationWarehouseCredentialsUUID types.String              `tfsdk:"organization_warehouse_credentials_uuid"`
+	WarehouseConnection                  *warehouseConnectionModel `tfsdk:"warehouse_connection"`
+	UpstreamProjectUUID                  types.String              `tfsdk:"upstream_project_uuid"`
 }
 
 func (r *projectResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -155,8 +173,59 @@ func (r *projectResource) Schema(ctx context.Context, req resource.SchemaRequest
 				},
 			},
 			"organization_warehouse_credentials_uuid": schema.StringAttribute{
-				MarkdownDescription: "The UUID of the organization warehouse credentials to use.",
+				MarkdownDescription: "The UUID of the organization warehouse credentials to use. Mutually exclusive with warehouse_connection.",
 				Optional:            true,
+			},
+			"warehouse_connection": schema.SingleNestedAttribute{
+				MarkdownDescription: "The warehouse connection configuration. Mutually exclusive with organization_warehouse_credentials_uuid.",
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						MarkdownDescription: "The type of warehouse. Currently only 'bigquery' is supported.",
+						Required:            true,
+					},
+					"project": schema.StringAttribute{
+						MarkdownDescription: "The GCP project ID for BigQuery.",
+						Required:            true,
+					},
+					"dataset": schema.StringAttribute{
+						MarkdownDescription: "The BigQuery dataset name.",
+						Required:            true,
+					},
+					"keyfile_contents": schema.StringAttribute{
+						MarkdownDescription: "The contents of the service account key file in JSON format.",
+						Required:            true,
+						Sensitive:           true,
+					},
+					"authentication_type": schema.StringAttribute{
+						MarkdownDescription: "The authentication type for BigQuery. Valid values: 'sso', 'private_key', 'adc'. Optional.",
+						Optional:            true,
+					},
+					"location": schema.StringAttribute{
+						MarkdownDescription: "The location of the BigQuery dataset.",
+						Optional:            true,
+					},
+					"timeout_seconds": schema.Int64Attribute{
+						MarkdownDescription: "The timeout for BigQuery queries in seconds.",
+						Optional:            true,
+					},
+					"maximum_bytes_billed": schema.Int64Attribute{
+						MarkdownDescription: "The maximum bytes that can be billed for a query.",
+						Optional:            true,
+					},
+					"priority": schema.StringAttribute{
+						MarkdownDescription: "The priority for BigQuery jobs ('interactive' or 'batch').",
+						Optional:            true,
+					},
+					"retries": schema.Int64Attribute{
+						MarkdownDescription: "The number of retries for failed queries.",
+						Optional:            true,
+					},
+					"start_of_week": schema.Int64Attribute{
+						MarkdownDescription: "The start of week (0 = Sunday, 1 = Monday, etc.).",
+						Optional:            true,
+					},
+				},
 			},
 			"upstream_project_uuid": schema.StringAttribute{
 				MarkdownDescription: "The UUID of the upstream project for PREVIEW type projects.",
@@ -228,6 +297,67 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	if !plan.OrganizationWarehouseCredentialsUUID.IsNull() {
 		uuid := plan.OrganizationWarehouseCredentialsUUID.ValueString()
 		createReq.OrganizationWarehouseCredentialsUUID = &uuid
+	}
+
+	// Build warehouse connection config
+	if plan.WarehouseConnection != nil {
+		// Parse keyfile contents JSON
+		var keyfileMap map[string]interface{}
+		if err := json.Unmarshal([]byte(plan.WarehouseConnection.KeyfileContents.ValueString()), &keyfileMap); err != nil {
+			resp.Diagnostics.AddError(
+				"Error parsing keyfile_contents",
+				"Could not parse keyfile_contents as JSON: "+err.Error(),
+			)
+			return
+		}
+
+		warehouseConn := &models.BigQueryCredentials{
+			Type:            plan.WarehouseConnection.Type.ValueString(),
+			Project:         plan.WarehouseConnection.Project.ValueString(),
+			KeyfileContents: keyfileMap,
+		}
+
+		if !plan.WarehouseConnection.Dataset.IsNull() {
+			dataset := plan.WarehouseConnection.Dataset.ValueString()
+			warehouseConn.Dataset = &dataset
+		}
+
+		if !plan.WarehouseConnection.AuthenticationType.IsNull() {
+			authType := plan.WarehouseConnection.AuthenticationType.ValueString()
+			warehouseConn.AuthenticationType = &authType
+		}
+
+		if !plan.WarehouseConnection.Location.IsNull() {
+			location := plan.WarehouseConnection.Location.ValueString()
+			warehouseConn.Location = &location
+		}
+
+		if !plan.WarehouseConnection.TimeoutSeconds.IsNull() {
+			timeout := int(plan.WarehouseConnection.TimeoutSeconds.ValueInt64())
+			warehouseConn.TimeoutSeconds = &timeout
+		}
+
+		if !plan.WarehouseConnection.MaximumBytesBilled.IsNull() {
+			maxBytes := plan.WarehouseConnection.MaximumBytesBilled.ValueInt64()
+			warehouseConn.MaximumBytesBilled = &maxBytes
+		}
+
+		if !plan.WarehouseConnection.Priority.IsNull() {
+			priority := strings.ToLower(plan.WarehouseConnection.Priority.ValueString())
+			warehouseConn.Priority = &priority
+		}
+
+		if !plan.WarehouseConnection.Retries.IsNull() {
+			retries := int(plan.WarehouseConnection.Retries.ValueInt64())
+			warehouseConn.Retries = &retries
+		}
+
+		if !plan.WarehouseConnection.StartOfWeek.IsNull() {
+			startOfWeek := int(plan.WarehouseConnection.StartOfWeek.ValueInt64())
+			warehouseConn.StartOfWeek = &startOfWeek
+		}
+
+		createReq.WarehouseConnection = warehouseConn
 	}
 
 	if !plan.UpstreamProjectUUID.IsNull() {
