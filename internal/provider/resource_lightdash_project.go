@@ -478,6 +478,67 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		updateReq.OrganizationWarehouseCredentialsUUID = &uuid
 	}
 
+	// Build warehouse connection config
+	if plan.WarehouseConnection != nil {
+		// Parse keyfile contents JSON
+		var keyfileMap map[string]interface{}
+		if err := json.Unmarshal([]byte(plan.WarehouseConnection.KeyfileContents.ValueString()), &keyfileMap); err != nil {
+			resp.Diagnostics.AddError(
+				"Error parsing keyfile_contents",
+				"Could not parse keyfile_contents as JSON: "+err.Error(),
+			)
+			return
+		}
+
+		warehouseConn := &models.BigQueryCredentials{
+			Type:            plan.WarehouseConnection.Type.ValueString(),
+			Project:         plan.WarehouseConnection.Project.ValueString(),
+			KeyfileContents: keyfileMap,
+		}
+
+		if !plan.WarehouseConnection.Dataset.IsNull() {
+			dataset := plan.WarehouseConnection.Dataset.ValueString()
+			warehouseConn.Dataset = &dataset
+		}
+
+		if !plan.WarehouseConnection.AuthenticationType.IsNull() {
+			authType := plan.WarehouseConnection.AuthenticationType.ValueString()
+			warehouseConn.AuthenticationType = &authType
+		}
+
+		if !plan.WarehouseConnection.Location.IsNull() {
+			location := plan.WarehouseConnection.Location.ValueString()
+			warehouseConn.Location = &location
+		}
+
+		if !plan.WarehouseConnection.TimeoutSeconds.IsNull() {
+			timeout := int(plan.WarehouseConnection.TimeoutSeconds.ValueInt64())
+			warehouseConn.TimeoutSeconds = &timeout
+		}
+
+		if !plan.WarehouseConnection.MaximumBytesBilled.IsNull() {
+			maxBytes := plan.WarehouseConnection.MaximumBytesBilled.ValueInt64()
+			warehouseConn.MaximumBytesBilled = &maxBytes
+		}
+
+		if !plan.WarehouseConnection.Priority.IsNull() {
+			priority := strings.ToLower(plan.WarehouseConnection.Priority.ValueString())
+			warehouseConn.Priority = &priority
+		}
+
+		if !plan.WarehouseConnection.Retries.IsNull() {
+			retries := int(plan.WarehouseConnection.Retries.ValueInt64())
+			warehouseConn.Retries = &retries
+		}
+
+		if !plan.WarehouseConnection.StartOfWeek.IsNull() {
+			startOfWeek := int(plan.WarehouseConnection.StartOfWeek.ValueInt64())
+			warehouseConn.StartOfWeek = &startOfWeek
+		}
+
+		updateReq.WarehouseConnection = warehouseConn
+	}
+
 	// Update project
 	tflog.Info(ctx, fmt.Sprintf("Updating project %s", plan.ProjectUUID.ValueString()))
 	updatedProject, err := r.client.UpdateProjectV1(plan.ProjectUUID.ValueString(), updateReq)
