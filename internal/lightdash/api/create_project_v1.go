@@ -23,9 +23,15 @@ import (
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
+type CreateProjectV1Results struct {
+	HasContentCopy   bool           `json:"hasContentCopy"`
+	ContentCopyError *string        `json:"contentCopyError,omitempty"`
+	Project          models.Project `json:"project"`
+}
+
 type CreateProjectV1Response struct {
-	Results models.Project `json:"results,omitempty"`
-	Status  string         `json:"status"`
+	Results CreateProjectV1Results `json:"results,omitempty"`
+	Status  string                 `json:"status"`
 }
 
 func (c *Client) CreateProjectV1(project *models.CreateProject) (*models.Project, error) {
@@ -56,9 +62,9 @@ func (c *Client) CreateProjectV1(project *models.CreateProject) (*models.Project
 	}
 
 	// Validate that the project UUID is present in the response
-	if response.Results.ProjectUUID == "" {
+	if response.Results.Project.ProjectUUID == "" {
 		return nil, fmt.Errorf("project UUID is missing in the response")
 	}
 
-	return &response.Results, nil
+	return &response.Results.Project, nil
 }
