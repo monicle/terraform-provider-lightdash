@@ -60,7 +60,7 @@ type CreateProject struct {
 	DbtConnection                            *DbtGithubProjectConfig `json:"dbtConnection"`
 	DbtVersion                               string                  `json:"dbtVersion"`
 	OrganizationWarehouseCredentialsUUID     *string                 `json:"organizationWarehouseCredentialsUuid,omitempty"`
-	WarehouseConnection                      *WarehouseCredentials   `json:"warehouseConnection,omitempty"`
+	WarehouseConnection                      *BigQueryCredentials    `json:"warehouseConnection,omitempty"`
 	UpstreamProjectUUID                      *string                 `json:"upstreamProjectUuid,omitempty"`
 	CopyWarehouseConnectionFromUpstreamProject *bool                 `json:"copyWarehouseConnectionFromUpstreamProject,omitempty"`
 }
@@ -71,5 +71,5 @@ type UpdateProject struct {
 	DbtConnection                        *DbtGithubProjectConfig `json:"dbtConnection"`
 	DbtVersion                           string                  `json:"dbtVersion"`
 	OrganizationWarehouseCredentialsUUID *string                 `json:"organizationWarehouseCredentialsUuid,omitempty"`
-	WarehouseConnection                  *WarehouseCredentials   `json:"warehouseConnection,omitempty"`
+	WarehouseConnection                  *BigQueryCredentials    `json:"warehouseConnection,omitempty"`
 }

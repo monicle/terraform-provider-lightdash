@@ -50,3 +50,38 @@ resource "lightdash_project" "preview" {
   upstream_project_uuid                   = lightdash_project.analytics.project_uuid
   organization_warehouse_credentials_uuid = lightdash_warehouse_credentials.bigquery.organization_warehouse_uuid
 }
+
+# Alternative: Create a project with inline warehouse connection
+# This is useful when you want to create a project without creating a separate warehouse credentials resource
+resource "lightdash_project" "analytics_inline" {
+  organization_uuid = "xxxxxxxx-xxxxxxxxxx-xxxxxxxxx"
+  name              = "Analytics Project with Inline Credentials"
+  type              = "DEFAULT"
+  dbt_version       = "v1.10"
+
+  # GitHub dbt connection
+  dbt_connection = {
+    type                 = "github"
+    authorization_method = "installation_id"
+    repository           = "my-org/dbt-project"
+    branch               = "main"
+    project_sub_path     = "/"
+  }
+
+  # Inline warehouse connection (instead of organization_warehouse_credentials_uuid)
+  warehouse_connection = {
+    type             = "bigquery"
+    project          = "my-gcp-project-id"
+    dataset          = "my_dataset"
+    keyfile_contents = file("${path.module}/service-account-key.json")
+
+    # Optional settings
+    authentication_type  = "private_key"
+    location             = "US"
+    timeout_seconds      = 300
+    maximum_bytes_billed = 1000000000
+    priority             = "interactive"
+    retries              = 3
+    start_of_week        = 1
+  }
+}
