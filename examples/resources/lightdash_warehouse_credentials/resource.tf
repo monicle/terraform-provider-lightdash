@@ -1,9 +1,9 @@
 resource "lightdash_warehouse_credentials" "bigquery_prod" {
-  organization_uuid    = "xxxxxxxx-xxxxxxxxxx-xxxxxxxxx"
-  name                 = "BigQuery Production"
-  description          = "Production BigQuery warehouse credentials"
-  warehouse_type       = "bigquery"
-  authentication_type  = "private_key"
+  organization_uuid   = "xxxxxxxx-xxxxxxxxxx-xxxxxxxxx"
+  name                = "BigQuery Production"
+  description         = "Production BigQuery warehouse credentials"
+  warehouse_type      = "bigquery"
+  authentication_type = "private_key"
 
   # BigQuery specific configuration
   project          = "my-gcp-project-id"
