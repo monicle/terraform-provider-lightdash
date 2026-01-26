@@ -64,12 +64,3 @@ type CreateProject struct {
 	UpstreamProjectUUID                      *string                 `json:"upstreamProjectUuid,omitempty"`
 	CopyWarehouseConnectionFromUpstreamProject *bool                 `json:"copyWarehouseConnectionFromUpstreamProject,omitempty"`
 }
-
-// UpdateProject represents the request body for updating a project
-type UpdateProject struct {
-	Name                                 string                  `json:"name"`
-	DbtConnection                        *DbtGithubProjectConfig `json:"dbtConnection"`
-	DbtVersion                           string                  `json:"dbtVersion"`
-	OrganizationWarehouseCredentialsUUID *string                 `json:"organizationWarehouseCredentialsUuid,omitempty"`
-	WarehouseConnection                  *BigQueryCredentials    `json:"warehouseConnection,omitempty"`
-}
