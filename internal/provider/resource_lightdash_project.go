@@ -20,22 +20,19 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
-	_ resource.Resource                = &projectResource{}
-	_ resource.ResourceWithConfigure   = &projectResource{}
-	_ resource.ResourceWithImportState = &projectResource{}
+	_ resource.Resource              = &projectResource{}
+	_ resource.ResourceWithConfigure = &projectResource{}
 )
 
 func NewProjectResource() resource.Resource {
@@ -431,68 +428,25 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Extract the resource ID
-	extractedStrings, err := extractProjectResourceId(req.ID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error extracting resource ID",
-			"Could not extract resource ID, unexpected error: "+err.Error(),
-		)
-		return
-	}
-	organizationUUID := extractedStrings[0]
-	projectUUID := extractedStrings[1]
+func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	// Projects are immutable - any change requires replacement
+	// This method exists only to satisfy the resource.Resource interface
+	resp.Diagnostics.AddError(
+		"Update not supported",
+		"Lightdash projects are immutable. Any changes require destroying and recreating the resource.",
+	)
+}
 
-	// Get the imported project
-	importedProject, err := r.client.GetProjectV1(projectUUID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Getting project",
-			fmt.Sprintf("Could not get project with organization UUID %s and project UUID %s, unexpected error: %s", organizationUUID, projectUUID, err.Error()),
-		)
-		return
-	}
-
-	// Set the resource attributes
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_uuid"), importedProject.OrganizationUUID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_uuid"), importedProject.ProjectUUID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), importedProject.ProjectName)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("type"), importedProject.ProjectType)...)
-
-	if importedProject.DbtVersion != "" {
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("dbt_version"), importedProject.DbtVersion)...)
-	}
-
-	if importedProject.OrganizationWarehouseCredentialsUUID != nil {
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_warehouse_credentials_uuid"), *importedProject.OrganizationWarehouseCredentialsUUID)...)
-	}
-
-	if importedProject.UpstreamProjectUUID != nil {
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("upstream_project_uuid"), *importedProject.UpstreamProjectUUID)...)
-	}
-
-	// Note: dbt connection credentials are not returned in the API response for security reasons
-	// User will need to set them manually in the configuration
+func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	// Projects are not deleted via Terraform
+	// This is a no-op to allow Terraform to remove the resource from state
+	// The actual project remains in Lightdash and must be deleted manually via the UI or API
 	resp.Diagnostics.AddWarning(
-		"DBT Connection not imported",
-		"The dbt connection credentials (personal_access_token, etc.) are not returned by the API for security reasons. You must manually configure these in your Terraform configuration.",
+		"Project not deleted",
+		"The Lightdash project was removed from Terraform state but still exists in Lightdash. You must manually delete it from the Lightdash UI if desired.",
 	)
 }
 
 func getProjectResourceId(organizationUUID string, projectUUID string) string {
 	return fmt.Sprintf("organizations/%s/projects/%s", organizationUUID, projectUUID)
-}
-
-func extractProjectResourceId(input string) ([]string, error) {
-	pattern := `^organizations/([^/]+)/projects/([^/]+)$`
-	groups, err := extractStrings(input, pattern)
-	if err != nil {
-		return nil, fmt.Errorf("could not extract resource ID: %w", err)
-	}
-
-	organizationUUID := groups[0]
-	projectUUID := groups[1]
-	return []string{organizationUUID, projectUUID}, nil
 }
