@@ -49,7 +49,7 @@ func (c *Client) CreateProjectV1(project *models.CreateProject) (*models.Project
 	}
 
 	// Do request
-	body, err := c.doRequest(req)
+	body, err := c.DoRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %v, body: %s", err, string(marshalled))
 	}

@@ -23,11 +23,14 @@ import (
 )
 
 type GetProjectV1Results struct {
-	OrganizationUUID  string `json:"organizationUuid"`
-	ProjectUUID       string `json:"projectUuid"`
-	ProjectName       string `json:"name"`
-	ProjectType       string `json:"type"`
-	SchedulerTimezone string `json:"schedulerTimezone"`
+	OrganizationUUID                     string  `json:"organizationUuid"`
+	ProjectUUID                          string  `json:"projectUuid"`
+	ProjectName                          string  `json:"name"`
+	ProjectType                          string  `json:"type"`
+	SchedulerTimezone                    string  `json:"schedulerTimezone"`
+	DbtVersion                           string  `json:"dbtVersion,omitempty"`
+	OrganizationWarehouseCredentialsUUID *string `json:"organizationWarehouseCredentialsUuid,omitempty"`
+	UpstreamProjectUUID                  *string `json:"upstreamProjectUuid,omitempty"`
 }
 
 type GetProjectV1Response struct {

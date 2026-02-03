@@ -34,7 +34,7 @@ func (c *Client) DeletePersonalAccessTokenV1(tokenUuid string) error {
 	}
 
 	// Do the request
-	_, err = c.doRequest(req)
+	_, err = c.DoRequest(req)
 	if err != nil {
 		return fmt.Errorf("error performing DELETE request for personal access token UUID '%s': %v", tokenUuid, err)
 	}
