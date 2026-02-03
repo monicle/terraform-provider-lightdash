@@ -43,7 +43,7 @@ func (c *Client) CreatePersonalAccessTokenV1(request *models.CreatePersonalAcces
 	}
 
 	// Do the request
-	body, err := c.doRequest(req)
+	body, err := c.DoRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("error performing POST request for personal access token: %v, body: %s", err, string(marshalled))
 	}

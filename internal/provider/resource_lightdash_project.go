@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
+	v1 "github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api/v1"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
 )
 
@@ -391,7 +392,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 
 	// Get project
-	project, err := r.client.GetProjectV1(state.ProjectUUID.ValueString())
+	project, err := v1.GetProjectV1(r.client, state.ProjectUUID.ValueString())
 	if err != nil {
 		// If the project is not found (404), remove it from state
 		if strings.Contains(err.Error(), "404") {

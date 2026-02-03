@@ -36,7 +36,7 @@ func (c *Client) ListPersonalAccessTokensV1() ([]models.PersonalAccessToken, err
 	}
 
 	// Do the request
-	body, err := c.doRequest(req)
+	body, err := c.DoRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("error performing GET request for personal access tokens: %v", err)
 	}
