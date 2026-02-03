@@ -127,6 +127,7 @@ func (p *lightdashProvider) Resources(ctx context.Context) []func() resource.Res
 		NewProjectAgentResource,
 		NewProjectAgentEvaluationsResource,
 		NewProjectResource,
+		NewPersonalAccessTokenResource,
 	}
 }
 
@@ -149,6 +150,7 @@ func (p *lightdashProvider) DataSources(ctx context.Context) []func() datasource
 		NewSpacesDataSource,
 		NewSpaceDataSource,
 		NewOrganizationAgentsDataSource,
+		NewPersonalAccessTokensDataSource,
 	}
 }
 
