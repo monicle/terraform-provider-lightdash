@@ -97,6 +97,44 @@ For running the full suite of Acceptance tests, which create actual resources an
 make testacc
 ```
 
+## Available Resources
+
+| Resource | Description |
+|----------|-------------|
+| `lightdash_group` | Manages a Lightdash group within an organization |
+| `lightdash_organization_role_member` | Manages organization-level role assignments for members |
+| `lightdash_personal_access_token` | Manages personal access tokens for the authenticated user |
+| `lightdash_project` | Manages a Lightdash project |
+| `lightdash_project_agent` | Manages AI agent settings for a project |
+| `lightdash_project_agent_evaluations` | Manages AI agent evaluations for a project |
+| `lightdash_project_role_group` | Manages project-level role assignments for groups |
+| `lightdash_project_role_member` | Manages project-level role assignments for members |
+| `lightdash_project_scheduler_settings` | Manages scheduler settings for a project |
+| `lightdash_space` | Manages a Lightdash space within a project |
+
+## Available Data Sources
+
+| Data Source | Description |
+|-------------|-------------|
+| `lightdash_authenticated_user` | Retrieves information about the authenticated user |
+| `lightdash_group` | Retrieves information about a specific group |
+| `lightdash_group_members` | Retrieves members of a specific group |
+| `lightdash_organization` | Retrieves information about the organization |
+| `lightdash_organization_agents` | Retrieves all AI agents in the organization |
+| `lightdash_organization_groups` | Retrieves all groups in the organization |
+| `lightdash_organization_member` | Retrieves information about a specific organization member |
+| `lightdash_organization_members` | Retrieves all members of the organization |
+| `lightdash_organization_members_by_emails` | Retrieves organization members by their email addresses |
+| `lightdash_personal_access_tokens` | Retrieves all personal access tokens for the authenticated user |
+| `lightdash_project` | Retrieves information about a specific project |
+| `lightdash_project_agent` | Retrieves AI agent settings for a project |
+| `lightdash_project_group_accesses` | Retrieves group access settings for a project |
+| `lightdash_project_members` | Retrieves all members of a project |
+| `lightdash_project_scheduler_settings` | Retrieves scheduler settings for a project |
+| `lightdash_projects` | Retrieves all projects in the organization |
+| `lightdash_space` | Retrieves information about a specific space |
+| `lightdash_spaces` | Retrieves all spaces in a project |
+
 ## How to Contribute
 
 Contributions to the `terraform-provider-lightdash` are welcome! Check out our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to get involved.

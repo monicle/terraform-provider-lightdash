@@ -1,0 +1,1 @@
+Retrieves a list of all personal access tokens for the authenticated user. This data source provides details for each token, including its UUID, description, creation timestamp, expiration date, rotation timestamp, and last used timestamp. The tokens are sorted by their UUID. Note that the actual token values are not returned by this data source for security reasons.
