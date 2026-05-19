@@ -59,17 +59,17 @@ type dbtConnectionModel struct {
 
 // warehouseConnectionModel describes the warehouse connection nested object
 type warehouseConnectionModel struct {
-	Type                 types.String `tfsdk:"type"`
-	Project              types.String `tfsdk:"project"`
-	Dataset              types.String `tfsdk:"dataset"`
-	KeyfileContents      types.String `tfsdk:"keyfile_contents"`
-	AuthenticationType   types.String `tfsdk:"authentication_type"`
-	Location             types.String `tfsdk:"location"`
-	TimeoutSeconds       types.Int64  `tfsdk:"timeout_seconds"`
-	MaximumBytesBilled   types.Int64  `tfsdk:"maximum_bytes_billed"`
-	Priority             types.String `tfsdk:"priority"`
-	Retries              types.Int64  `tfsdk:"retries"`
-	StartOfWeek          types.Int64  `tfsdk:"start_of_week"`
+	Type               types.String `tfsdk:"type"`
+	Project            types.String `tfsdk:"project"`
+	Dataset            types.String `tfsdk:"dataset"`
+	KeyfileContents    types.String `tfsdk:"keyfile_contents"`
+	AuthenticationType types.String `tfsdk:"authentication_type"`
+	Location           types.String `tfsdk:"location"`
+	TimeoutSeconds     types.Int64  `tfsdk:"timeout_seconds"`
+	MaximumBytesBilled types.Int64  `tfsdk:"maximum_bytes_billed"`
+	Priority           types.String `tfsdk:"priority"`
+	Retries            types.Int64  `tfsdk:"retries"`
+	StartOfWeek        types.Int64  `tfsdk:"start_of_week"`
 }
 
 // projectResourceModel describes the resource data model.
