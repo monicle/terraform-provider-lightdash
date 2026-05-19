@@ -27,6 +27,12 @@ linters:
     - unconvert
     - unparam
     - gosec
+  settings:
+    govet:
+      disable:
+        # The inline analyzer does not support type parameter inference yet,
+        # which causes false positives on generic stdlib calls like slices.Contains.
+        - inline
   exclusions:
     presets:
       - comments
