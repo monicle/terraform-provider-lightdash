@@ -3,7 +3,6 @@
   "extends": ["config:recommended"],
   "forkProcessing": "enabled",
   "timezone": "Asia/Tokyo",
-  "schedule": ["before 6am on monday"],
   "labels": ["dependencies"],
   "prHourlyLimit": 4,
   "prConcurrentLimit": 10,
@@ -30,7 +29,6 @@
     "labels": ["security", "dependencies"]
   },
   "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": ["before 6am on monday"]
+    "enabled": true
   }
 }
