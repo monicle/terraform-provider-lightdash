@@ -15,6 +15,14 @@
 # Visit https://golangci-lint.run/ for usage documentation
 # and information on other useful linters
 version: "2"
+run:
+  # Explicit target — trunk pins golangci-lint2 built with Go 1.25, which
+  # otherwise refuses to load a go.mod that declares `go 1.26.0` (see
+  # https://github.com/golangci/golangci-lint/issues/6001). The fork bumped
+  # go.mod to 1.26.0 for stdlib CVE remediation; setup-go still installs
+  # 1.26.x for build/test via go-version-file: go.mod. Linting at 1.25 is
+  # safe because the source doesn't use any 1.26-only language features.
+  go: "1.25"
 linters:
   enable:
     - copyloopvar

@@ -136,8 +136,10 @@ func (p *lightdashProvider) Resources(ctx context.Context) []func() resource.Res
 		NewGroupResource,
 		NewProjectRoleGroupResource,
 		NewProjectSchedulerSettingsResource,
+		NewProjectUpstreamResource,
 		NewProjectAgentResource,
 		NewProjectAgentEvaluationsResource,
+		NewOAuthApplicationResource,
 		NewProjectResource,
 		NewPersonalAccessTokenResource,
 		NewUserAttributeResource,
@@ -160,9 +162,12 @@ func (p *lightdashProvider) DataSources(ctx context.Context) []func() datasource
 		NewProjectMembersDataSource,
 		NewProjectGroupAccessesDataSource,
 		NewProjectSchedulerSettingsDataSource,
+		NewProjectUpstreamDataSource,
 		NewSpacesDataSource,
 		NewSpaceDataSource,
 		NewOrganizationAgentsDataSource,
+		NewOAuthApplicationDataSource,
+		NewOAuthApplicationsDataSource,
 		NewPersonalAccessTokensDataSource,
 	}
 }

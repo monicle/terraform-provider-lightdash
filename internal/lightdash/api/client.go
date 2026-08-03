@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -40,7 +41,14 @@ func NewClient(host, token *string, maxConcurrentRequests *int64) (*Client, erro
 	}
 
 	if host != nil {
-		c.HostUrl = *host
+		u, err := url.Parse(*host)
+		if err != nil {
+			return nil, fmt.Errorf("invalid host URL: %w", err)
+		}
+		if u.Scheme == "" {
+			u.Scheme = "https"
+		}
+		c.HostUrl = u.String()
 	}
 
 	if token != nil {

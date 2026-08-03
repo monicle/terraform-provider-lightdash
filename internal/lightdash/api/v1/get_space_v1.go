@@ -42,24 +42,26 @@ type SpaceAccessGroup struct {
 }
 
 type ChildSpace struct {
-	OrganizationUuid string `json:"organizationUuid"`
-	ProjectUuid      string `json:"projectUuid"`
-	SpaceUUID        string `json:"uuid"`
-	Name             string `json:"name"`
-	IsPrivate        bool   `json:"isPrivate"`
+	OrganizationUuid         string `json:"organizationUuid"`
+	ProjectUuid              string `json:"projectUuid"`
+	SpaceUUID                string `json:"uuid"`
+	Name                     string `json:"name"`
+	InheritParentPermissions *bool  `json:"inheritParentPermissions,omitempty"`
+	IsPrivate                bool   `json:"isPrivate,omitempty"`
 }
 
 type GetSpaceV1Results struct {
 	// The response doesn't contain the OrganizationUUID right now
 	// OrganizationUUID string              `json:"organizationUuid"`
-	ProjectUUID        string              `json:"projectUuid"`
-	ParentSpaceUUID    *string             `json:"parentSpaceUuid,omitempty"`
-	SpaceUUID          string              `json:"uuid"`
-	SpaceName          string              `json:"name"`
-	IsPrivate          bool                `json:"isPrivate"`
-	ChildSpaces        []ChildSpace        `json:"childSpaces"`
-	SpaceAccessMembers []SpaceAccessMember `json:"access"`
-	SpaceAccessGroups  []SpaceAccessGroup  `json:"groupsAccess"`
+	ProjectUUID              string              `json:"projectUuid"`
+	ParentSpaceUUID          *string             `json:"parentSpaceUuid,omitempty"`
+	SpaceUUID                string              `json:"uuid"`
+	SpaceName                string              `json:"name"`
+	InheritParentPermissions *bool               `json:"inheritParentPermissions,omitempty"`
+	IsPrivate                bool                `json:"isPrivate,omitempty"`
+	ChildSpaces              []ChildSpace        `json:"childSpaces"`
+	SpaceAccessMembers       []SpaceAccessMember `json:"access"`
+	SpaceAccessGroups        []SpaceAccessGroup  `json:"groupsAccess"`
 }
 
 type GetSpaceV1Response struct {
@@ -99,26 +101,4 @@ func GetSpaceV1(c *api.Client, projectUuid string, spaceUuid string) (*GetSpaceV
 	}
 
 	return &response.Results, nil
-}
-
-func GetSpaceMemberV1(c *api.Client, projectUuid string, spaceUuid string, userUuid string) (*SpaceAccessMember, error) {
-	// Validate the arguments
-	if len(strings.TrimSpace(userUuid)) == 0 {
-		return nil, fmt.Errorf("user UUID is empty")
-	}
-
-	// Get the space
-	space, err := GetSpaceV1(c, projectUuid, spaceUuid)
-	if err != nil {
-		return nil, err
-	}
-
-	// Find the user in the space
-	for _, member := range space.SpaceAccessMembers {
-		if member.UserUUID == userUuid {
-			return &member, nil
-		}
-	}
-
-	return nil, fmt.Errorf("user %s is not found in the space %s", userUuid, spaceUuid)
 }
