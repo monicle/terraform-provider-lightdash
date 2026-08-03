@@ -37,10 +37,10 @@ build: gen-docs go-tidy gosec deadcode
 	go build -v ./
 
 gosec:
-	gosec ./internal/...
+	go tool gosec ./internal/...
 
 deadcode:
-	deadcode -test ./...
+	go run golang.org/x/tools/cmd/deadcode -test ./...
 
 upgrade-go-mod:
 	# Upgrade dependencies
@@ -50,7 +50,7 @@ upgrade-go-mod:
 	# Upgrade go.sum
 	go mod vendor
 
-lint: run-trunk-check run-pre-commit
+lint: run-trunk-check run-pre-commit deadcode gosec
 
 run-trunk-check:
 	trunk check --all

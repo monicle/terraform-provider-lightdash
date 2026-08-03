@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -70,7 +71,6 @@ type projectAgentResourceModel struct {
 	UserAccess            types.List   `tfsdk:"user_access"`
 	Description           types.String `tfsdk:"description"`
 	SpaceAccess           types.List   `tfsdk:"space_access"`
-	EnableReasoning       types.Bool   `tfsdk:"enable_reasoning"`
 	DeleteProtection      types.Bool   `tfsdk:"deletion_protection"`
 	Integrations          types.List   `tfsdk:"integrations"`
 	Version               types.Int64  `tfsdk:"version"`
@@ -183,17 +183,17 @@ func (r *projectAgentResource) Schema(ctx context.Context, req resource.SchemaRe
 				Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "The description of the Lightdash agent.",
-				Required:            true,
+				MarkdownDescription: "Agent description. Omit for empty (matches Lightdash default).",
+				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString(""),
 			},
 			"space_access": schema.ListAttribute{
 				ElementType:         types.StringType,
-				MarkdownDescription: "UUIDs of spaces the agent has access to.",
-				Required:            true,
-			},
-			"enable_reasoning": schema.BoolAttribute{
-				MarkdownDescription: "Whether to enable reasoning for the agent.",
-				Required:            true,
+				MarkdownDescription: "UUIDs of spaces the agent may access. An empty list means unrestricted access to all spaces (Lightdash default).",
+				Optional:            true,
+				Computed:            true,
+				Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 			},
 			"deletion_protection": schema.BoolAttribute{
 				MarkdownDescription: "When set to `true`, prevents the destruction of the project agent resource by Terraform. Defaults to `false`.",
@@ -340,17 +340,17 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		}
 	}
 
-	// Get enable data access (defaults to false if not set)
+	// Get enable data access (schema default true when omitted)
 	enableDataAccess := plan.EnableDataAccess.ValueBool()
 
-	// Get enable self improvement (defaults to false if not set)
+	// Get enable self improvement (schema default true when omitted)
 	enableSelfImprovement := plan.EnableSelfImprovement.ValueBool()
 
-	// Get enable reasoning
-	enableReasoning := plan.EnableReasoning.ValueBool()
-
-	// Get description
-	description := plan.Description.ValueString()
+	// Get description (schema default empty string when omitted)
+	description := ""
+	if !plan.Description.IsUnknown() && !plan.Description.IsNull() {
+		description = plan.Description.ValueString()
+	}
 
 	// Get version (defaults to 2 if not set)
 	version := plan.Version.ValueInt64()
@@ -372,7 +372,7 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 		spaceAccess = []string{}
 	}
 
-	agent, err := agentService.CreateAgent(ctx, projectUuid, plan.Name.ValueString(), description, instruction, imageUrl, tags, integrations, groupAccess, userAccess, spaceAccess, enableDataAccess, enableSelfImprovement, enableReasoning, version)
+	agent, err := agentService.CreateAgent(ctx, projectUuid, plan.Name.ValueString(), description, instruction, imageUrl, tags, integrations, groupAccess, userAccess, spaceAccess, enableDataAccess, enableSelfImprovement, version)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating Lightdash project agent",
@@ -382,8 +382,7 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Map response to state model
-	plan.ID = types.StringValue(fmt.Sprintf("organizations/%s/projects/%s/agents/%s",
-		agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
+	plan.ID = types.StringValue(getProjectAgentResourceId(agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
 	plan.OrganizationUUID = types.StringValue(agent.OrganizationUUID)
 	plan.ProjectUUID = types.StringValue(agent.ProjectUUID)
 	plan.AgentUUID = types.StringValue(agent.AgentUUID)
@@ -454,7 +453,6 @@ func (r *projectAgentResource) Create(ctx context.Context, req resource.CreateRe
 
 	plan.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 	plan.EnableSelfImprovement = types.BoolValue(agent.EnableSelfImprovement)
-	plan.EnableReasoning = types.BoolValue(agent.EnableReasoning)
 	plan.Description = types.StringValue(agent.Description)
 
 	// Convert group access slice to Terraform List (ensure never null)
@@ -534,8 +532,7 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	// Map response to state model
-	state.ID = types.StringValue(fmt.Sprintf("organizations/%s/projects/%s/agents/%s",
-		agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
+	state.ID = types.StringValue(getProjectAgentResourceId(agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
 	state.OrganizationUUID = types.StringValue(agent.OrganizationUUID)
 	state.ProjectUUID = types.StringValue(agent.ProjectUUID)
 	state.AgentUUID = types.StringValue(agent.AgentUUID)
@@ -606,7 +603,6 @@ func (r *projectAgentResource) Read(ctx context.Context, req resource.ReadReques
 
 	state.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 	state.EnableSelfImprovement = types.BoolValue(agent.EnableSelfImprovement)
-	state.EnableReasoning = types.BoolValue(agent.EnableReasoning)
 	state.Description = types.StringValue(agent.Description)
 
 	// Convert group access slice to Terraform List (ensure never null)
@@ -678,8 +674,11 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	instructionVal := plan.Instruction.ValueString()
 	instruction := &instructionVal
 
-	// Always send description
-	descriptionVal := plan.Description.ValueString()
+	// Description from plan (schema default empty string when omitted)
+	descriptionVal := ""
+	if !plan.Description.IsUnknown() && !plan.Description.IsNull() {
+		descriptionVal = plan.Description.ValueString()
+	}
 	description := &descriptionVal
 
 	// Handle optional imageUrl
@@ -742,9 +741,9 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 		userAccess = []string{}
 	}
 
-	// Always send spaceAccess
+	// Space access from plan (empty list means unrestricted access to all spaces)
 	var spaceAccess []string
-	if !plan.SpaceAccess.IsNull() {
+	if !plan.SpaceAccess.IsUnknown() && !plan.SpaceAccess.IsNull() {
 		diags := plan.SpaceAccess.ElementsAs(ctx, &spaceAccess, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -754,17 +753,12 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 		spaceAccess = []string{}
 	}
 
-	// Always include enableDataAccess in updates since it's a required field
+	// Enable flags from plan (schema supplies defaults when omitted)
 	enableDataAccessVal := plan.EnableDataAccess.ValueBool()
 	enableDataAccess := &enableDataAccessVal
 
-	// Always include enableSelfImprovement in updates since it's a required field
 	enableSelfImprovementVal := plan.EnableSelfImprovement.ValueBool()
 	enableSelfImprovement := &enableSelfImprovementVal
-
-	// Always include enableReasoning in updates
-	enableReasoningVal := plan.EnableReasoning.ValueBool()
-	enableReasoning := &enableReasoningVal
 
 	// Always include version in updates
 	versionVal := plan.Version.ValueInt64()
@@ -772,7 +766,7 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 
 	// Update agent via service
 	agentService := services.NewAgentService(r.client)
-	agent, err := agentService.UpdateAgent(ctx, projectUuid, agentUuid, name, description, instruction, imageUrl, tags, integrations, groupAccess, userAccess, spaceAccess, enableDataAccess, enableSelfImprovement, enableReasoning, version)
+	agent, err := agentService.UpdateAgent(ctx, projectUuid, agentUuid, name, description, instruction, imageUrl, tags, integrations, groupAccess, userAccess, spaceAccess, enableDataAccess, enableSelfImprovement, version)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating Lightdash project agent",
@@ -782,8 +776,7 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// Update the plan with the response data
-	plan.ID = types.StringValue(fmt.Sprintf("organizations/%s/projects/%s/agents/%s",
-		agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
+	plan.ID = types.StringValue(getProjectAgentResourceId(agent.OrganizationUUID, agent.ProjectUUID, agent.AgentUUID))
 	plan.OrganizationUUID = types.StringValue(agent.OrganizationUUID)
 	plan.ProjectUUID = types.StringValue(agent.ProjectUUID)
 	plan.AgentUUID = types.StringValue(agent.AgentUUID)
@@ -854,7 +847,6 @@ func (r *projectAgentResource) Update(ctx context.Context, req resource.UpdateRe
 
 	plan.EnableDataAccess = types.BoolValue(agent.EnableDataAccess)
 	plan.EnableSelfImprovement = types.BoolValue(agent.EnableSelfImprovement)
-	plan.EnableReasoning = types.BoolValue(agent.EnableReasoning)
 	plan.Description = types.StringValue(agent.Description)
 
 	// Convert group access slice to Terraform List (ensure never null)
@@ -1033,7 +1025,6 @@ func (r *projectAgentResource) ImportState(ctx context.Context, req resource.Imp
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_data_access"), agent.EnableDataAccess)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_self_improvement"), agent.EnableSelfImprovement)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("enable_reasoning"), agent.EnableReasoning)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("description"), agent.Description)...)
 
 	// Convert group access slice to Terraform List (ensure never null)

@@ -67,6 +67,10 @@ type spaceResourceModel struct {
 	GroupAccessList  types.Set    `tfsdk:"group_access"`
 }
 
+func configuredSpaceIsPrivate(config spaceResourceModel) *bool {
+	return config.IsPrivate.ValueBoolPointer()
+}
+
 // spaceMemberAccessBlockModel maps the member access data for the user input schema (access block)
 type spaceMemberAccessBlockModel struct {
 	UserUUID  types.String `tfsdk:"user_uuid"`
@@ -126,7 +130,7 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Required:            true,
 			},
 			"parent_space_uuid": schema.StringAttribute{
-				MarkdownDescription: "The UUID of the parent space. Setting this creates a nested space that inherits access controls and visibility from its parent. Leave empty for a root space.",
+				MarkdownDescription: "The UUID of the parent space. Setting this creates a nested space. Leave empty for a root space.",
 				Optional:            true,
 				// Computed:            true,
 			},
@@ -138,7 +142,7 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				},
 			},
 			"is_private": schema.BoolAttribute{
-				MarkdownDescription: "Whether the space is private (`true`) or public (`false`). Note: This setting is ignored for nested spaces which inherit visibility.",
+				MarkdownDescription: "Whether the space is private (`true`) or public (`false`). This maps to Lightdash `inheritParentPermissions` on the API: public spaces inherit project permissions (`inheritParentPermissions=true`); private (restricted) spaces do not (`inheritParentPermissions=false`).",
 				Optional:            true,
 				Computed:            true,
 			},
@@ -167,7 +171,7 @@ func (r *spaceResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 		},
 		Blocks: map[string]schema.Block{
 			"access": schema.SetNestedBlock{
-				MarkdownDescription: "Manages direct user access to the space. Specify user UUIDs and their assigned roles. Note: Organization administrators have implicit access. This block is ignored for nested spaces.",
+				MarkdownDescription: "Manages direct user access to the space. Specify user UUIDs and their assigned roles. Note: Organization administrators have implicit access.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"user_uuid": schema.StringAttribute{
@@ -250,26 +254,8 @@ func (r *spaceResource) ValidateConfig(ctx context.Context, req resource.Validat
 
 func (r *spaceResource) validateNestedSpaceConfig(_ context.Context, config spaceResourceModel) []error {
 	var errors []error
-	// The available options are different for root and nested spaces.
-	if !config.ParentSpaceUUID.IsNull() {
-		// Nested spaces inherit visibility from the parent space.
-		// So, it is impossible to set is_private for nested spaces.
-		if !config.IsPrivate.IsNull() {
-			errors = append(errors, fmt.Errorf("parent space UUID is set, is_private must be empty"))
-		}
-
-		// Nested spaces inherit access from the parent space.
-		// So, it is impossible to set access or group_access when parent_space_uuid is set.
-		if !config.MemberAccessList.IsNull() && len(config.MemberAccessList.Elements()) > 0 {
-			errors = append(errors, fmt.Errorf("parent space UUID is set, member access list must be empty"))
-		}
-
-		// Nested spaces inherit access from the parent space.
-		// So, it is impossible to set access or group_access when parent_space_uuid is set.
-		if !config.GroupAccessList.IsNull() && len(config.GroupAccessList.Elements()) > 0 {
-			errors = append(errors, fmt.Errorf("parent space UUID is set, group access list must be empty"))
-		}
-	}
+	// Validation logic for nested spaces can be added here if needed in the future.
+	// Currently, nested spaces support the same options as root spaces (is_private, access blocks).
 	return errors
 }
 
@@ -289,9 +275,10 @@ func (r *spaceResource) validateSpaceVisibilityConfig(_ context.Context, config 
 
 func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	// Retrieve values from plan
-	var plan spaceResourceModel
+	var plan, config spaceResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -316,7 +303,7 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	createOptions := controllers.CreateSpaceOptions{
 		ProjectUUID:     plan.ProjectUUID.ValueString(),
 		SpaceName:       plan.SpaceName.ValueString(),
-		IsPrivate:       plan.IsPrivate.ValueBoolPointer(),
+		IsPrivate:       configuredSpaceIsPrivate(config),
 		ParentSpaceUUID: plan.ParentSpaceUUID.ValueStringPointer(),
 		MemberAccess:    convertToControllerMemberAccess(memberAccess), // Convert to controller format
 		GroupAccess:     convertToControllerGroupAccess(groupAccess),   // Convert to controller format
@@ -445,8 +432,9 @@ func (r *spaceResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Retrieve values from plan and state
-	var plan, oldState spaceResourceModel
+	var plan, config, oldState spaceResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &oldState)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -475,7 +463,7 @@ func (r *spaceResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		ProjectUUID:     plan.ProjectUUID.ValueString(),
 		SpaceUUID:       plan.SpaceUUID.ValueString(),
 		SpaceName:       plan.SpaceName.ValueString(),
-		IsPrivate:       plan.IsPrivate.ValueBoolPointer(),
+		IsPrivate:       configuredSpaceIsPrivate(config),
 		ParentSpaceUUID: plan.ParentSpaceUUID.ValueStringPointer(),
 		MemberAccess:    convertToControllerMemberAccess(memberAccess), // Convert to controller format
 		GroupAccess:     convertToControllerGroupAccess(groupAccess),   // Convert to controller format
@@ -600,13 +588,9 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("parent_space_uuid"), parentSpaceUUID)...)
 
-	// Determine if the imported space is nested based on the ParentSpaceUUID
-	// Check if parentSpaceUUID (types.String) is not null and not unknown
-	isImportedSpaceNested := !parentSpaceUUID.IsNull() && !parentSpaceUUID.IsUnknown()
-
-	// Populate 'access' with direct members (only relevant for root spaces)
+	// Populate 'access' with direct members
 	directMemberAccessListForImport := []spaceMemberAccessBlockModel{}
-	if !isImportedSpaceNested && spaceDetailsFromController.SpaceAccessMembers != nil {
+	if spaceDetailsFromController.SpaceAccessMembers != nil {
 		for _, member := range spaceDetailsFromController.SpaceAccessMembers {
 			if member.HasDirectSpaceMemberAccess() {
 				directMemberAccessListForImport = append(directMemberAccessListForImport, spaceMemberAccessBlockModel{
@@ -625,12 +609,11 @@ func (r *spaceResource) ImportState(ctx context.Context, req resource.ImportStat
 		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access"), memberAccessList)...)
 	}
 
-	// Populate 'group_access' (only relevant for root spaces or if API provides explicit flag)
-	// Assuming API doesn't distinguish explicit group grants, populate with all groups from API result for root spaces.
-	// For nested spaces, this block should be empty as access is inherited.
+	// Populate 'group_access'
+	// Assuming API doesn't distinguish explicit group grants, populate with all groups from API result.
 	groupAccessListForImport := []spaceGroupAccessBlockModel{}
-	if !isImportedSpaceNested && spaceDetailsFromController.SpaceAccessGroups != nil {
-		// For root spaces, populate group_access with all groups returned by the API
+	if spaceDetailsFromController.SpaceAccessGroups != nil {
+		// Populate group_access with all groups returned by the API
 		for _, group := range spaceDetailsFromController.SpaceAccessGroups {
 			groupAccessListForImport = append(groupAccessListForImport, spaceGroupAccessBlockModel{
 				GroupUUID: types.StringValue(group.GroupUUID),
