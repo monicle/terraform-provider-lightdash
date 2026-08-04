@@ -66,6 +66,15 @@ func (s *RoleService) GetRoles(ctx context.Context, orgUUID string) ([]models.Ro
 }
 
 func (s *RoleService) ResolveRoleID(ctx context.Context, orgUUID string, roleName string) (string, error) {
+	// System roles use their name as roleUuid in Lightdash v2 (e.g. "member" → "member").
+	// GET /api/v2/orgs/*/roles does NOT include "member" in its results even though
+	// the v2 assignment API accepts "member" as roleId (server-side falls through
+	// isSystemRole in RolesService.applyOrganizationUserRoleAssignment).
+	// Short-circuit for known system role names to avoid a bogus "role not found".
+	if normalized, ok := normalizeSystemRoleName(roleName); ok {
+		return normalized, nil
+	}
+
 	roles, err := s.GetRoles(ctx, orgUUID)
 	if err != nil {
 		return "", err
@@ -263,6 +272,24 @@ func terraformRoleFromAssignment[T ~string](
 func normalizeRoleName(name string) string {
 	normalized := strings.ToLower(strings.TrimSpace(name))
 	return strings.ReplaceAll(normalized, " ", "_")
+}
+
+// normalizeSystemRoleName returns the canonical roleId for a system role name if
+// the input matches one of Lightdash's v2 system roles at organization or
+// project scope. Match is case-insensitive and treats "Interactive Viewer" as
+// "interactive_viewer". Returns ok=false for custom role names, which need to
+// be resolved against the org's roles catalog.
+func normalizeSystemRoleName(name string) (string, bool) {
+	candidate := normalizeRoleName(name)
+	if candidate == "" {
+		return "", false
+	}
+	if models.OrganizationMemberRole(candidate).IsValid() {
+		// OrganizationMemberRole covers all 6 org system roles including "member",
+		// which is a strict superset of ProjectMemberRole (5 project system roles).
+		return candidate, true
+	}
+	return "", false
 }
 
 func roleMatchesName(role models.Role, roleName string) bool {

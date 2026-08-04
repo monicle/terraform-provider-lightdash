@@ -26,7 +26,7 @@ resource "lightdash_organization_role_member" "test" {
 ### Required
 
 - `organization_uuid` (String) The UUID of the Lightdash organization.
-- `role` (String) The organization role assigned to the user.
+- `role` (String) The organization role assigned to the user. One of `member`, `viewer`, `interactive_viewer`, `editor`, `developer`, `admin`.
 - `user_uuid` (String) The UUID of the Lightdash user.
 
 ### Read-Only

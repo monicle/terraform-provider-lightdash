@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
@@ -103,8 +104,17 @@ func (r *projectRoleMemberResource) Schema(ctx context.Context, req resource.Sch
 				},
 			},
 			"role": schema.StringAttribute{
-				MarkdownDescription: "Lightdash user's role.",
+				MarkdownDescription: "Lightdash user's role. One of `viewer`, `interactive_viewer`, `editor`, `developer`, `admin`.",
 				Required:            true,
+				Validators: []validator.String{
+					ValidateStringOneOf{Allowed: []string{
+						string(models.PROJECT_VIEWER_ROLE),
+						string(models.PROJECT_INTERACTIVE_VIEWER_ROLE),
+						string(models.PROJECT_EDITOR_ROLE),
+						string(models.PROJECT_DEVELOPER_ROLE),
+						string(models.PROJECT_ADMIN_ROLE),
+					}},
+				},
 			},
 			"send_email": schema.BoolAttribute{
 				MarkdownDescription: "Send email to the user.",
