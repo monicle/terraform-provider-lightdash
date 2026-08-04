@@ -92,6 +92,39 @@ func TestNormalizeRoleName(t *testing.T) {
 	}
 }
 
+func TestNormalizeSystemRoleName(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		want   string
+		wantOK bool
+	}{
+		{name: "member lowercase", input: "member", want: "member", wantOK: true},
+		{name: "MEMBER upper", input: "MEMBER", want: "member", wantOK: true},
+		{name: "viewer", input: "viewer", want: "viewer", wantOK: true},
+		{name: "Interactive Viewer display name", input: "Interactive Viewer", want: "interactive_viewer", wantOK: true},
+		{name: "interactive_viewer slug", input: "interactive_viewer", want: "interactive_viewer", wantOK: true},
+		{name: "editor", input: "editor", want: "editor", wantOK: true},
+		{name: "developer", input: "developer", want: "developer", wantOK: true},
+		{name: "admin", input: "admin", want: "admin", wantOK: true},
+		{name: "empty", input: "", wantOK: false},
+		{name: "whitespace only", input: "   ", wantOK: false},
+		{name: "custom role name", input: "custom-analyst", wantOK: false},
+		{name: "superadmin", input: "superadmin", wantOK: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := normalizeSystemRoleName(tt.input)
+			if ok != tt.wantOK {
+				t.Fatalf("ok = %v, want %v (got=%q)", ok, tt.wantOK, got)
+			}
+			if ok && got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestTerraformProjectRoleFromAssignment(t *testing.T) {
 	role, err := TerraformProjectRoleFromAssignment(&models.RoleAssignment{
 		RoleID:   "editor",

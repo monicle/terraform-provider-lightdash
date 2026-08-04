@@ -26,7 +26,7 @@ resource "lightdash_project_role_member" "test" {
 ### Required
 
 - `project_uuid` (String) Lightdash project UUID.
-- `role` (String) Lightdash user's role.
+- `role` (String) Lightdash user's role. One of `viewer`, `interactive_viewer`, `editor`, `developer`, `admin`.
 - `user_uuid` (String) Lightdash user UUID.
 
 ### Optional

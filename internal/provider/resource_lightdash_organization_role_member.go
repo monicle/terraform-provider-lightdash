@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/api"
 	"github.com/ubie-oss/terraform-provider-lightdash/internal/lightdash/models"
@@ -97,8 +98,18 @@ func (r *organizationRoleMemberResource) Schema(ctx context.Context, req resourc
 				Computed:            true,
 			},
 			"role": schema.StringAttribute{
-				MarkdownDescription: "The organization role assigned to the user.",
+				MarkdownDescription: "The organization role assigned to the user. One of `member`, `viewer`, `interactive_viewer`, `editor`, `developer`, `admin`.",
 				Required:            true,
+				Validators: []validator.String{
+					ValidateStringOneOf{Allowed: []string{
+						string(models.ORGANIZATION_MEMBER_ROLE),
+						string(models.ORGANIZATION_VIEWER_ROLE),
+						string(models.ORGANIZATION_INTERACTIVE_VIEWER_ROLE),
+						string(models.ORGANIZATION_EDITOR_ROLE),
+						string(models.ORGANIZATION_DEVELOPER_ROLE),
+						string(models.ORGANIZATION_ADMIN_ROLE),
+					}},
+				},
 			},
 			"last_updated": schema.StringAttribute{
 				MarkdownDescription: "The timestamp of the last Terraform update applied to the organization role member.",

@@ -56,3 +56,39 @@ func (v ValidateNonEmptyString) ValidateString(ctx context.Context, req validato
 		return
 	}
 }
+
+// ValidateStringOneOf validates that a string attribute is one of the allowed
+// values. Null / unknown values are skipped so this composes with Optional
+// attributes; pair with ValidateNonEmptyString for Required attributes.
+type ValidateStringOneOf struct {
+	Allowed []string
+}
+
+func (v ValidateStringOneOf) Description(ctx context.Context) string {
+	return fmt.Sprintf("value must be one of: %s", strings.Join(v.Allowed, ", "))
+}
+
+func (v ValidateStringOneOf) MarkdownDescription(ctx context.Context) string {
+	quoted := make([]string, len(v.Allowed))
+	for i, s := range v.Allowed {
+		quoted[i] = fmt.Sprintf("`%s`", s)
+	}
+	return fmt.Sprintf("value must be one of: %s", strings.Join(quoted, ", "))
+}
+
+func (v ValidateStringOneOf) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	value := req.ConfigValue.ValueString()
+	for _, allowed := range v.Allowed {
+		if value == allowed {
+			return
+		}
+	}
+	resp.Diagnostics.AddAttributeError(
+		req.Path,
+		"Invalid String Value",
+		fmt.Sprintf("Value must be one of [%s]. Got: %q", strings.Join(v.Allowed, ", "), value),
+	)
+}
