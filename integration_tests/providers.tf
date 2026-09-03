@@ -13,7 +13,7 @@
 # limitations under the License.
 
 terraform {
-  required_version = "1.14.0"
+  required_version = "1.16.1"
 
   # Please reconfigure the backend for your own environment
   # TODO set the backend configuration with a command line option of Terraform
